@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Music } from 'lucide-react';
 import SearchSection from './components/SearchSection';
 import FilterPanel from './components/FilterPanel';
+import ChordDisplay from './components/ChordDisplay';
 import { searchByProgression as searchChordProgression } from './utils/chordSearch';
-import { createAudioContext, playProgression as playChordProgression, stopAudioNodes } from './utils/audioSynthesis';
+import { createAudioContext, playChord, stopAudioNodes } from './utils/audioSynthesis';
+import { progressionToNashville } from './utils/nashvilleNumbers';
 
 export default function App() {
   const [searchProgression, setSearchProgression] = useState([]);
@@ -13,6 +15,8 @@ export default function App() {
   const [speed, setSpeed] = useState(120); // BPM
   const [audioContext, setAudioContext] = useState(null);
   const [audioNodes, setAudioNodes] = useState([]);
+  const [showNashville, setShowNashville] = useState(false);
+  const [currentKey, setCurrentKey] = useState('C');
   const [filters, setFilters] = useState({
     genres: [],
     decades: [],
@@ -118,7 +122,7 @@ export default function App() {
       
       try {
         // Play the current chord using our audio synthesis
-        const nodes = playChordProgression(audioContext, [chords[index]], chordDuration, {
+        const nodes = playChord(audioContext, chords[index], chordDuration, null, {
           volume: 0.3,
           waveType: 'sawtooth',
           octave: 4
@@ -176,6 +180,26 @@ export default function App() {
             onPlayProgression={playProgression}
           />
 
+          {/* Chord Display with Nashville Numbers */}
+          {searchProgression.length > 0 && (
+            <div className="mt-6">
+              <ChordDisplay
+                chords={searchProgression}
+                currentIndex={currentChordIndex}
+                isPlaying={isPlaying}
+                onChordClick={(index) => {
+                  setCurrentChordIndex(index);
+                  // Could add skip-to functionality here
+                }}
+                showNashville={showNashville}
+                onToggleNashville={() => setShowNashville(!showNashville)}
+                keySignature={currentKey}
+                onKeyChange={setCurrentKey}
+                autoDetectKey={true}
+              />
+            </div>
+          )}
+
           {/* Search Results */}
           {searchResults.length > 0 && (
             <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -199,8 +223,26 @@ export default function App() {
                         <div className="mt-2">
                           <span className="text-sm font-medium text-gray-700">Progression: </span>
                           <span className="text-sm text-gray-600">
-                            {result.sectionData.progression.join(' - ')}
+                            {showNashville 
+                              ? progressionToNashville(result.sectionData.progression, currentKey).join(' - ')
+                              : result.sectionData.progression.join(' - ')
+                            }
                           </span>
+                          {showNashville ? (
+                            <div className="mt-1">
+                              <span className="text-sm font-medium text-gray-700">Chord names: </span>
+                              <span className="text-sm text-gray-500">
+                                {result.sectionData.progression.join(' - ')}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="mt-1">
+                              <span className="text-sm font-medium text-gray-700">Nashville: </span>
+                              <span className="text-sm text-blue-600">
+                                {progressionToNashville(result.sectionData.progression, currentKey).join(' - ')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button
@@ -221,7 +263,9 @@ export default function App() {
           {searchProgression.length > 0 && searchResults.length === 0 && (
             <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
               <p className="text-gray-500">
-                No songs found matching the progression "{searchProgression.join(' - ')}"
+                No songs found matching the progression "{showNashville 
+                  ? progressionToNashville(searchProgression, currentKey).join(' - ')
+                  : searchProgression.join(' - ')}"
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 Try adjusting your search or filters, or use partial matching

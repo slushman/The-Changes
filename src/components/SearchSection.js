@@ -142,11 +142,11 @@ const SearchSection = ({
 
   // Common chord progressions for quick access
   const commonProgressions = [
-    { name: "I-V-vi-IV", chords: ["C", "G", "Am", "F"], description: "Pop progression" },
-    { name: "ii-V-I", chords: ["Dm", "G", "C"], description: "Jazz turnaround" },
-    { name: "vi-IV-I-V", chords: ["Am", "F", "C", "G"], description: "Pop variation" },
-    { name: "I-vi-ii-V", chords: ["C", "Am", "Dm", "G"], description: "Circle progression" },
-    { name: "I-bVII-IV", chords: ["C", "Bb", "F"], description: "Rock progression" }
+    { name: "1-5-6m-4", chords: ["C", "G", "Am", "F"], description: "Pop progression" },
+    { name: "2m-5-1", chords: ["Dm", "G", "C"], description: "Jazz turnaround" },
+    { name: "6m-4-1-5", chords: ["Am", "F", "C", "G"], description: "Pop variation" },
+    { name: "1-6m-2m-5", chords: ["C", "Am", "Dm", "G"], description: "Circle progression" },
+    { name: "1-b7-4", chords: ["C", "Bb", "F"], description: "Rock progression" }
   ];
 
   // Clear search
