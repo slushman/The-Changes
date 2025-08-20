@@ -3,6 +3,7 @@ import { Music } from 'lucide-react';
 import SearchSection from './components/SearchSection';
 import FilterPanel from './components/FilterPanel';
 import { searchByProgression as searchChordProgression } from './utils/chordSearch';
+import { createAudioContext, playProgression as playChordProgression, stopAudioNodes } from './utils/audioSynthesis';
 
 export default function App() {
   const [searchProgression, setSearchProgression] = useState([]);
@@ -11,6 +12,7 @@ export default function App() {
   const [currentChordIndex, setCurrentChordIndex] = useState(0);
   const [speed, setSpeed] = useState(120); // BPM
   const [audioContext, setAudioContext] = useState(null);
+  const [audioNodes, setAudioNodes] = useState([]);
   const [filters, setFilters] = useState({
     genres: [],
     decades: [],
@@ -23,16 +25,24 @@ export default function App() {
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    // Initialize AudioContext (we'll create a basic audio context)
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      setAudioContext(ctx);
-      return () => {
-        if (ctx) ctx.close();
-      };
-    } catch (error) {
-      console.warn('Audio context not available:', error);
-    }
+    // Initialize AudioContext using our utility
+    const initAudio = async () => {
+      try {
+        const ctx = await createAudioContext();
+        setAudioContext(ctx);
+        console.log('Audio context initialized successfully:', ctx.state);
+      } catch (error) {
+        console.warn('Audio context not available:', error);
+      }
+    };
+    
+    initAudio();
+    
+    return () => {
+      if (audioContext) {
+        audioContext.close();
+      }
+    };
   }, []);
 
   const handleSearch = (searchOptions = {}) => {
@@ -59,24 +69,39 @@ export default function App() {
     }
   };
 
-  const playProgression = (chords) => {
+  const playProgression = async (chords) => {
+    console.log('🎵 Play progression called with chords:', chords);
+    
     if (isPlaying) {
+      console.log('🛑 Already playing, stopping playback');
       stopPlayback();
       return;
     }
 
     if (!audioContext) {
-      console.warn('Audio context not available');
+      console.warn('❌ Audio context not available');
       return;
+    }
+    
+    console.log('🔊 Audio context state:', audioContext.state);
+
+    // Resume audio context if suspended (required for user interaction)
+    if (audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume();
+      } catch (error) {
+        console.warn('Could not resume audio context:', error);
+        return;
+      }
     }
 
     setIsPlaying(true);
     setCurrentChordIndex(0);
     
-    const chordDuration = (60 / speed) * 1000; // Convert BPM to milliseconds
+    const chordDuration = 60 / speed; // Convert BPM to seconds
     let index = 0;
 
-    const playNext = () => {
+    const playNext = async () => {
       if (index >= chords.length) {
         setIsPlaying(false);
         setCurrentChordIndex(0);
@@ -85,11 +110,28 @@ export default function App() {
 
       setCurrentChordIndex(index);
       
-      // For now, we'll just log the chord since we don't have audio synthesis yet
-      console.log(`Playing chord: ${chords[index]}`);
+      // Stop previous audio nodes
+      if (audioNodes.length > 0) {
+        stopAudioNodes(audioNodes);
+        setAudioNodes([]);
+      }
+      
+      try {
+        // Play the current chord using our audio synthesis
+        const nodes = playChordProgression(audioContext, [chords[index]], chordDuration, {
+          volume: 0.3,
+          waveType: 'sawtooth',
+          octave: 4
+        });
+        
+        setAudioNodes(nodes);
+        console.log(`Playing chord: ${chords[index]}`);
+      } catch (error) {
+        console.error('Error playing chord:', error);
+      }
       
       index++;
-      intervalRef.current = setTimeout(playNext, chordDuration);
+      intervalRef.current = setTimeout(playNext, chordDuration * 1000);
     };
 
     playNext();
@@ -100,6 +142,13 @@ export default function App() {
       clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
+    
+    // Stop all audio nodes
+    if (audioNodes.length > 0) {
+      stopAudioNodes(audioNodes);
+      setAudioNodes([]);
+    }
+    
     setIsPlaying(false);
     setCurrentChordIndex(0);
   };
