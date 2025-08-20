@@ -4,7 +4,7 @@ import SearchSection from './components/SearchSection';
 import FilterPanel from './components/FilterPanel';
 import ChordDisplay from './components/ChordDisplay';
 import { searchByProgression as searchChordProgression } from './utils/chordSearch';
-import { createAudioContext, playProgression as playChordProgression, stopAudioNodes } from './utils/audioSynthesis';
+import { createAudioContext, playChord, stopAudioNodes } from './utils/audioSynthesis';
 import { progressionToNashville } from './utils/nashvilleNumbers';
 
 export default function App() {
@@ -122,7 +122,7 @@ export default function App() {
       
       try {
         // Play the current chord using our audio synthesis
-        const nodes = playChordProgression(audioContext, [chords[index]], chordDuration, {
+        const nodes = playChord(audioContext, chords[index], chordDuration, null, {
           volume: 0.3,
           waveType: 'sawtooth',
           octave: 4
