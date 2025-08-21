@@ -29,12 +29,13 @@ const SearchSection = ({
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // Update input value when searchProgression changes externally
+  // Only update input value when searchProgression changes from external sources (like clicking suggestions)
+  // We don't want to interfere with user typing
   useEffect(() => {
-    if (Array.isArray(searchProgression)) {
+    if (Array.isArray(searchProgression) && inputValue === '') {
       setInputValue(searchProgression.join(' '));
     }
-  }, [searchProgression]);
+  }, [searchProgression, inputValue]);
 
   // Handle input changes and provide autocomplete
   const handleInputChange = (e) => {
@@ -59,7 +60,6 @@ const SearchSection = ({
   // Update suggestions based on current input and cursor position
   const updateSuggestions = (value, position) => {
     const beforeCursor = value.substring(0, position);
-    const afterCursor = value.substring(position);
     
     // Find the current chord being typed
     const words = beforeCursor.split(/[\s,|-]+/);

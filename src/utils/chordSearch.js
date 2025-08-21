@@ -392,8 +392,10 @@ export const getProgressionSuggestions = (partialProgression, maxSuggestions = 1
     .slice(0, maxSuggestions);
 };
 
-export default {
+const chordSearchUtils = {
   searchByProgression,
   searchByChords,
   getProgressionSuggestions
 };
+
+export default chordSearchUtils;

@@ -3,10 +3,10 @@
  * Converts chord names to numbers based on key position
  */
 
-// Circle of fifths for key relationships
-const CIRCLE_OF_FIFTHS = [
-  'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'F', 'Bb', 'Eb', 'Ab'
-];
+// Circle of fifths for key relationships (currently unused but kept for future features)
+// const CIRCLE_OF_FIFTHS = [
+//   'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'F', 'Bb', 'Eb', 'Ab'
+// ];
 
 // Major scale intervals
 const MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11];

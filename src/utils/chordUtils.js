@@ -14,10 +14,10 @@ const SEMITONE_TO_NOTE = [
   'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
 ];
 
-// Alternative note names mapping
-const NOTE_ALIASES = {
-  'db': 'c#', 'eb': 'd#', 'gb': 'f#', 'ab': 'g#', 'bb': 'a#'
-};
+// Alternative note names mapping (currently unused but kept for future features)
+// const NOTE_ALIASES = {
+//   'db': 'c#', 'eb': 'd#', 'gb': 'f#', 'ab': 'g#', 'bb': 'a#'
+// };
 
 // Chord quality patterns and their standardized forms
 const CHORD_QUALITIES = {
@@ -461,7 +461,7 @@ export const getChordSuggestions = (partialChord, maxSuggestions = 10) => {
   return suggestions.slice(0, maxSuggestions);
 };
 
-export default {
+const chordUtils = {
   parseChord,
   normalizeNote,
   normalizeChord,
@@ -474,3 +474,5 @@ export default {
   parseProgressionInput,
   getChordSuggestions
 };
+
+export default chordUtils;

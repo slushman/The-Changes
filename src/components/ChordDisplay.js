@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Music, Hash, Key, RotateCcw } from 'lucide-react';
-import { chordToNashville, progressionToNashville, detectKey } from '../utils/nashvilleNumbers';
+import { progressionToNashville, detectKey } from '../utils/nashvilleNumbers';
 
 const ChordDisplay = ({
   chords = [],

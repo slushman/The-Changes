@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Music } from 'lucide-react';
 import SearchSection from './SearchSection';
+import SearchResults from './SearchResults';
 import FilterPanel from './FilterPanel';
 import ChordDisplay from './ChordDisplay';
 import { searchByProgression as searchChordProgression } from '../utils/chordSearch';
@@ -54,26 +55,83 @@ const HomePage = () => {
         audioContext.close();
       }
     };
-  }, []);
+  }, [audioContext]);
+
+  // Automatically search when progression changes
+  useEffect(() => {
+    console.log('🔄 Search progression changed:', searchProgression);
+    if (searchProgression && searchProgression.length > 0) {
+      // Perform search directly here instead of calling handleSearch to avoid dependency issues
+      try {
+        const results = searchChordProgression(searchProgression, {
+          genreFilter: filters.genres.length > 0 ? filters.genres[0] : null,
+          decadeFilter: filters.decades.length > 0 ? filters.decades[0] : null,
+          sectionFilter: null,
+          complexityFilter: filters.complexities.length > 0 ? filters.complexities[0] : null,
+          popularityFilter: filters.popularities.length > 0 ? filters.popularities[0] : null
+        });
+        console.log('🔍 Auto-search results:', results.length);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Auto-search error:', error);
+        setSearchResults([]);
+      }
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchProgression, filters]);
 
   const handleSearch = (searchOptions = {}) => {
+    console.log('🔍 Search triggered with:', { searchProgression, searchOptions, filters });
+    
     if (!searchProgression || searchProgression.length === 0) {
+      console.log('❌ No search progression provided');
       setSearchResults([]);
       return;
     }
 
     try {
       // Use the search utilities we built
-      const results = searchChordProgression(searchProgression, {
-        ...searchOptions,
-        genreFilter: filters.genres.length > 0 ? filters.genres[0] : null,
-        decadeFilter: filters.decades.length > 0 ? filters.decades[0] : null,
-        sectionFilter: filters.sections.length > 0 ? filters.sections[0] : null,
-        complexityFilter: filters.complexities.length > 0 ? filters.complexities[0] : null,
-        popularityFilter: filters.popularities.length > 0 ? filters.popularities[0] : null
-      });
+      // Enhanced filtering to handle multiple section filters
+      let allResults = [];
       
-      setSearchResults(results);
+      if (filters.sections.length > 0) {
+        // Search each selected section separately for better section-specific results
+        filters.sections.forEach(section => {
+          const sectionResults = searchChordProgression(searchProgression, {
+            ...searchOptions,
+            genreFilter: filters.genres.length > 0 ? filters.genres[0] : null,
+            decadeFilter: filters.decades.length > 0 ? filters.decades[0] : null,
+            sectionFilter: section,
+            complexityFilter: filters.complexities.length > 0 ? filters.complexities[0] : null,
+            popularityFilter: filters.popularities.length > 0 ? filters.popularities[0] : null
+          });
+          allResults.push(...sectionResults);
+        });
+        
+        // Remove duplicates and sort by confidence
+        const uniqueResults = new Map();
+        allResults.forEach(result => {
+          const key = `${result.songId}-${result.matchedSection}`;
+          if (!uniqueResults.has(key) || result.confidence > uniqueResults.get(key).confidence) {
+            uniqueResults.set(key, result);
+          }
+        });
+        allResults = Array.from(uniqueResults.values()).sort((a, b) => b.confidence - a.confidence);
+      } else {
+        // No section filter, search all sections
+        allResults = searchChordProgression(searchProgression, {
+          ...searchOptions,
+          genreFilter: filters.genres.length > 0 ? filters.genres[0] : null,
+          decadeFilter: filters.decades.length > 0 ? filters.decades[0] : null,
+          sectionFilter: null,
+          complexityFilter: filters.complexities.length > 0 ? filters.complexities[0] : null,
+          popularityFilter: filters.popularities.length > 0 ? filters.popularities[0] : null
+        });
+      }
+      
+      console.log('✅ Search completed. Results found:', allResults.length);
+      setSearchResults(allResults);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -214,65 +272,18 @@ const HomePage = () => {
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Search Results ({searchResults.length} found)
-              </h2>
-              <div className="space-y-4">
-                {searchResults.map((result, index) => (
-                  <div key={`${result.songId}-${result.matchedSection}-${index}`} 
-                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                       onClick={() => handleSongClick(result.songId)}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">{result.title}</h3>
-                        <p className="text-gray-600">{result.artist}</p>
-                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                          <span>Section: {result.matchedSection}</span>
-                          <span>Genre: {result.genre}</span>
-                          <span>Decade: {result.decade}</span>
-                          <span>Confidence: {Math.round(result.confidence * 100)}%</span>
-                        </div>
-                        <div className="mt-2">
-                          <span className="text-sm font-medium text-gray-700">Progression: </span>
-                          <span className="text-sm text-gray-600">
-                            {showNashville 
-                              ? progressionToNashville(result.sectionData.progression, currentKey).join(' - ')
-                              : result.sectionData.progression.join(' - ')
-                            }
-                          </span>
-                          {showNashville ? (
-                            <div className="mt-1">
-                              <span className="text-sm font-medium text-gray-700">Chord names: </span>
-                              <span className="text-sm text-gray-500">
-                                {result.sectionData.progression.join(' - ')}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="mt-1">
-                              <span className="text-sm font-medium text-gray-700">Nashville: </span>
-                              <span className="text-sm text-blue-600">
-                                {progressionToNashville(result.sectionData.progression, currentKey).join(' - ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent song navigation when clicking play
-                          playProgression(result.sectionData.progression);
-                        }}
-                        className="ml-4 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
-                        title={isPlaying ? `Playing chord ${currentChordIndex + 1}` : 'Play progression'}
-                      >
-                        {isPlaying ? 'Stop' : 'Play'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SearchResults
+              results={searchResults}
+              searchProgression={searchProgression}
+              onSongClick={handleSongClick}
+              onPlayProgression={playProgression}
+              isPlaying={isPlaying}
+              currentChordIndex={currentChordIndex}
+              showNashville={showNashville}
+              currentKey={currentKey}
+              filters={filters}
+              className="mt-6"
+            />
           )}
 
           {/* No Results Message */}
