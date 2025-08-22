@@ -17,7 +17,14 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
+    "type-check": "echo 'Type checking would run here if TypeScript was configured'",
+    "test:integration": "npm test src/integration/ -- --watchAll=false",
+    "test:performance": "npm test src/performance/ -- --watchAll=false",
+    "test:a11y": "echo 'Accessibility tests would run here'",
+    "validate:database": "node -e \"import('./src/data/songDatabase.js').then(db => { const validation = require('./src/utils/songValidation').validateDatabase(db.songDatabase); console.log('Database validation:', validation.isValid ? 'PASSED' : 'FAILED'); if (!validation.isValid) { console.error(validation.errors); process.exit(1); } })\""
   },
   "eslintConfig": {
     "extends": [
