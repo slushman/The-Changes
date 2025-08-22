@@ -62,4 +62,10 @@
   - [x] 5.4 Create visual indicators for which song section contains the match
   - [x] 5.5 Add comprehensive unit tests for enhanced search results functionality
 - [ ] 6.0 Integrate Audio Synthesis with Visual Feedback
+  - [x] 6.1 Enhance visual indication of currently playing chord
+  - [x] 6.2 Add synchronized highlighting of chord changes during playback
+  - [ ] 6.3 Implement speed control (BPM adjustment) for chord playback
+  - [ ] 6.4 Add visual progress indicator for progression playback
+  - [ ] 6.5 Implement different chord voicings for audio synthesis
+  - [ ] 6.6 Add comprehensive unit tests for audio-visual integration
 - [ ] 7.0 Add Data Population and Testing Infrastructure

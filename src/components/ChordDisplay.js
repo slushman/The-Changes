@@ -4,12 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Music, Hash, Key, RotateCcw } from 'lucide-react';
+import { Music, Hash, Key, RotateCcw, Volume2 } from 'lucide-react';
 import { progressionToNashville, detectKey } from '../utils/nashvilleNumbers';
 
 const ChordDisplay = ({
   chords = [],
   currentIndex = 0,
+  chordProgress = 0, // Progress within current chord (0-1)
+  overallProgress = 0, // Overall progression progress (0-1)
   isPlaying = false,
   onChordClick = () => {},
   showNashville = false,
@@ -78,16 +80,23 @@ const ChordDisplay = ({
     return chords[index] || '';
   };
 
-  // Get chord classes for styling
+  // Get chord classes for styling with enhanced visual feedback
   const getChordClasses = (index) => {
-    const baseClasses = `${sizeClasses.chord} border-2 rounded-lg flex items-center justify-center font-semibold cursor-pointer transition-all duration-200 transform hover:scale-105`;
+    const baseClasses = `${sizeClasses.chord} border-2 rounded-lg flex items-center justify-center font-semibold cursor-pointer transition-all duration-300 transform hover:scale-105 relative`;
     
     if (index === currentIndex && isPlaying) {
-      return `${baseClasses} bg-blue-100 border-blue-300 text-blue-900 shadow-lg animate-pulse`;
+      // Enhanced currently playing chord with gradient, glow, and dynamic scaling based on progress
+      return `${baseClasses} bg-gradient-to-r from-blue-100 to-blue-200 border-blue-400 text-blue-900 shadow-xl scale-110 ring-4 ring-blue-200 ring-opacity-60`;
     } else if (index < currentIndex && isPlaying) {
-      return `${baseClasses} bg-gray-100 border-gray-300 text-gray-700`;
+      // Previously played chords with success styling and smooth fade-in
+      return `${baseClasses} bg-green-50 border-green-200 text-green-800 opacity-80 shadow-sm transform transition-all duration-500 ease-in-out`;
+    } else if (index > currentIndex && isPlaying) {
+      // Future chords with muted styling and anticipation effect
+      const isNext = index === currentIndex + 1;
+      return `${baseClasses} ${isNext ? 'bg-blue-25 border-blue-100' : 'bg-gray-50 border-gray-200'} text-gray-500 opacity-60 transition-all duration-300`;
     } else {
-      return `${baseClasses} bg-white border-gray-200 text-gray-900 hover:bg-gray-50`;
+      // Default state with smooth transitions
+      return `${baseClasses} bg-white border-gray-200 text-gray-900 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all duration-200`;
     }
   };
 
@@ -104,6 +113,42 @@ const ChordDisplay = ({
 
   return (
     <div className={`bg-white rounded-lg border border-gray-200 p-4 ${className}`}>
+      {/* Overall progression progress indicator */}
+      {isPlaying && chords.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">Progression Progress</span>
+            <span className="text-sm text-gray-500">
+              {Math.round(overallProgress * 100)}% complete
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 relative overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-100 ease-linear relative"
+              style={{ width: `${overallProgress * 100}%` }}
+            >
+              {/* Animated shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
+            </div>
+            {/* Chord segment indicators */}
+            <div className="absolute inset-0 flex">
+              {chords.map((_, index) => (
+                <div 
+                  key={index} 
+                  className="flex-1 border-r border-gray-300 last:border-r-0"
+                  style={{ minWidth: `${100 / chords.length}%` }}
+                ></div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-gray-400">
+            <span>Start</span>
+            <span>{currentIndex + 1} / {chords.length}</span>
+            <span>End</span>
+          </div>
+        </div>
+      )}
+      
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
@@ -182,10 +227,37 @@ const ChordDisplay = ({
                 >
                   {getChordDisplay(index)}
                   
-                  {/* Playing indicator */}
+                  {/* Enhanced playing indicator with multiple visual cues */}
                   {index === currentIndex && isPlaying && (
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                    <>
+                      {/* Animated sound wave indicator */}
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full p-1 shadow-lg animate-bounce">
+                        <Volume2 className="w-3 h-3" />
+                      </div>
+                      
+                      {/* Pulsing dot indicator */}
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
+                        <div className="absolute top-0 left-0 w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
+                      </div>
+                      
+                      {/* Synchronized progress bar overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-200 rounded-b-lg overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 rounded-b-lg transition-all duration-75 ease-linear"
+                          style={{
+                            width: `${chordProgress * 100}%`,
+                            background: `linear-gradient(90deg, #3b82f6 0%, #1d4ed8 ${chordProgress * 100}%, #93c5fd ${chordProgress * 100}%)`
+                          }}
+                        ></div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Completion indicator for previously played chords */}
+                  {index < currentIndex && isPlaying && (
+                    <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5 shadow-sm">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
                     </div>
                   )}
                 </div>

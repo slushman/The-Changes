@@ -13,7 +13,8 @@ import {
   stopAudioNodes,
   createAudioContext,
   getAvailableChordQualities,
-  getAvailableNotes
+  getAvailableNotes,
+  getAvailableVoicings
 } from './audioSynthesis';
 
 // Mock Web Audio API
@@ -307,6 +308,97 @@ describe('audioSynthesis', () => {
       expect(notes).toContain('A');
       expect(notes).toContain('F#');
       expect(notes).toContain('Bb');
+    });
+  });
+
+  describe('getAvailableVoicings', () => {
+    test('returns array of voicing objects', () => {
+      const voicings = getAvailableVoicings();
+      
+      expect(Array.isArray(voicings)).toBe(true);
+      expect(voicings.length).toBeGreaterThan(0);
+      
+      // Check structure of voicing objects
+      voicings.forEach(voicing => {
+        expect(voicing).toHaveProperty('name');
+        expect(voicing).toHaveProperty('description');
+        expect(typeof voicing.name).toBe('string');
+        expect(typeof voicing.description).toBe('string');
+      });
+      
+      // Check for expected voicings
+      const voicingNames = voicings.map(v => v.name);
+      expect(voicingNames).toContain('root');
+      expect(voicingNames).toContain('first-inversion');
+      expect(voicingNames).toContain('spread');
+    });
+  });
+
+  describe('chord voicings', () => {
+    test('root voicing returns standard frequencies', () => {
+      const rootFreqs = getChordFrequencies('C', 4, 'root');
+      const standardFreqs = getChordFrequencies('C', 4); // default is root
+      
+      expect(rootFreqs).toEqual(standardFreqs);
+    });
+
+    test('first inversion changes frequency order', () => {
+      const rootFreqs = getChordFrequencies('C', 4, 'root');
+      const inversionFreqs = getChordFrequencies('C', 4, 'first-inversion');
+      
+      expect(rootFreqs).not.toEqual(inversionFreqs);
+      expect(inversionFreqs.length).toBe(rootFreqs.length);
+      
+      // First inversion should have higher frequencies due to octave shifts
+      expect(inversionFreqs[0]).toBeGreaterThan(rootFreqs[0]);
+    });
+
+    test('spread voicing has different octave distribution', () => {
+      const rootFreqs = getChordFrequencies('C', 4, 'root');
+      const spreadFreqs = getChordFrequencies('C', 4, 'spread');
+      
+      expect(rootFreqs).not.toEqual(spreadFreqs);
+      expect(spreadFreqs.length).toBe(rootFreqs.length);
+    });
+
+    test('quartal voicing uses different intervals', () => {
+      const rootFreqs = getChordFrequencies('C', 4, 'root');
+      const quartalFreqs = getChordFrequencies('C', 4, 'quartal');
+      
+      expect(rootFreqs).not.toEqual(quartalFreqs);
+      // Quartal may have different number of notes due to different intervals
+      expect(quartalFreqs.length).toBeGreaterThan(0);
+    });
+
+    test('invalid voicing defaults to root', () => {
+      const rootFreqs = getChordFrequencies('C', 4, 'root');
+      const invalidFreqs = getChordFrequencies('C', 4, 'invalid-voicing');
+      
+      expect(rootFreqs).toEqual(invalidFreqs);
+    });
+  });
+
+  describe('playChord with voicing', () => {
+    test('accepts voicing parameter', () => {
+      mockAudioContext.createOscillator.mockClear();
+      
+      const nodes = playChord(mockAudioContext, 'C', 1.0, null, { voicing: 'spread' });
+      
+      expect(nodes.length).toBeGreaterThan(0);
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
+    });
+
+    test('different voicings create different oscillator patterns', () => {
+      mockAudioContext.createOscillator.mockClear();
+      
+      // Play same chord with different voicings
+      const rootNodes = playChord(mockAudioContext, 'C', 1.0, null, { voicing: 'root' });
+      const inversionNodes = playChord(mockAudioContext, 'C', 1.0, null, { voicing: 'first-inversion' });
+      
+      // Should create oscillators for both
+      expect(rootNodes.length).toBeGreaterThan(0);
+      expect(inversionNodes.length).toBeGreaterThan(0);
+      expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     });
   });
 

@@ -20,11 +20,14 @@ const HomePage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentChordIndex, setCurrentChordIndex] = useState(0);
+  const [chordProgress, setChordProgress] = useState(0); // Progress within current chord (0-1)
+  const [overallProgress, setOverallProgress] = useState(0); // Overall progression progress (0-1)
   const [speed, setSpeed] = useState(120); // BPM
   const [audioContext, setAudioContext] = useState(null);
   const [audioNodes, setAudioNodes] = useState([]);
   const [showNashville, setShowNashville] = useState(false);
   const [currentKey, setCurrentKey] = useState('C');
+  const [voicing, setVoicing] = useState('root');
   const [filters, setFilters] = useState({
     genres: [],
     decades: [],
@@ -50,6 +53,13 @@ const HomePage = () => {
     
     initAudio();
     
+    return () => {
+      // Cleanup will be handled by the audioContext dependency
+    };
+  }, []); // Only run once on mount
+
+  // Separate effect for cleanup
+  useEffect(() => {
     return () => {
       if (audioContext) {
         audioContext.close();
@@ -80,6 +90,29 @@ const HomePage = () => {
       setSearchResults([]);
     }
   }, [searchProgression, filters]);
+
+  // Handle speed changes during playback
+  useEffect(() => {
+    if (isPlaying && searchProgression.length > 0) {
+      console.log('🎵 Speed changed during playback, restarting with new tempo:', speed);
+      // Store current progress
+      const currentProgression = searchProgression;
+      const currentIndex = currentChordIndex;
+      
+      // Stop current playback
+      stopPlayback();
+      
+      // Restart with new speed after a short delay
+      setTimeout(() => {
+        if (currentIndex > 0) {
+          // If we were partway through, start from current chord
+          setCurrentChordIndex(currentIndex);
+        }
+        playProgression(currentProgression);
+      }, 100);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speed]);
 
   const handleSearch = (searchOptions = {}) => {
     console.log('🔍 Search triggered with:', { searchProgression, searchOptions, filters });
@@ -140,6 +173,13 @@ const HomePage = () => {
 
   const playProgression = async (chords) => {
     console.log('🎵 Play progression called with chords:', chords);
+    console.log('🎵 Current audioContext:', audioContext);
+    console.log('🎵 isPlaying state:', isPlaying);
+    
+    if (!chords || chords.length === 0) {
+      console.warn('❌ No chords provided to play');
+      return;
+    }
     
     if (isPlaying) {
       console.log('🛑 Already playing, stopping playback');
@@ -147,17 +187,28 @@ const HomePage = () => {
       return;
     }
 
-    if (!audioContext) {
-      console.warn('❌ Audio context not available');
-      return;
+    // Try to initialize audio context if not available (user interaction required)
+    let workingAudioContext = audioContext;
+    if (!workingAudioContext) {
+      console.log('🔧 Attempting to initialize audio context on user interaction...');
+      try {
+        workingAudioContext = await createAudioContext();
+        setAudioContext(workingAudioContext);
+        console.log('✅ Audio context initialized on user interaction:', workingAudioContext.state);
+      } catch (error) {
+        console.error('❌ Failed to initialize audio context:', error);
+        alert('Audio playback is not available. Please check your browser settings and ensure audio is not blocked.');
+        return;
+      }
     }
     
-    console.log('🔊 Audio context state:', audioContext.state);
+    console.log('🔊 Audio context state:', workingAudioContext.state);
 
     // Resume audio context if suspended (required for user interaction)
-    if (audioContext.state === 'suspended') {
+    if (workingAudioContext.state === 'suspended') {
       try {
-        await audioContext.resume();
+        await workingAudioContext.resume();
+        console.log('🔄 Audio context resumed');
       } catch (error) {
         console.warn('Could not resume audio context:', error);
         return;
@@ -169,15 +220,45 @@ const HomePage = () => {
     
     const chordDuration = 60 / speed; // Convert BPM to seconds
     let index = 0;
+    let startTime = Date.now();
 
     const playNext = async () => {
       if (index >= chords.length) {
         setIsPlaying(false);
         setCurrentChordIndex(0);
+        setOverallProgress(1); // Mark progression as complete
+        setTimeout(() => setOverallProgress(0), 1000); // Reset after a moment
         return;
       }
 
+      // Calculate precise timing for synchronized highlighting
+      const currentTime = Date.now();
+      const elapsedTime = (currentTime - startTime) / 1000;
+      const expectedTime = index * chordDuration;
+      const timeDrift = elapsedTime - expectedTime;
+      
+      // Update chord index with smooth transition
       setCurrentChordIndex(index);
+      setChordProgress(0); // Reset progress for new chord
+      
+      // Update overall progression progress
+      const overallProgressValue = (index + chordProgress) / chords.length;
+      setOverallProgress(overallProgressValue);
+      
+      // Start progress animation for current chord
+      const progressInterval = setInterval(() => {
+        const progressElapsed = (Date.now() - currentTime) / 1000;
+        const progress = Math.min(progressElapsed / chordDuration, 1);
+        setChordProgress(progress);
+        
+        // Update overall progress with current chord progress
+        const overallProgressValue = (index + progress) / chords.length;
+        setOverallProgress(overallProgressValue);
+        
+        if (progress >= 1) {
+          clearInterval(progressInterval);
+        }
+      }, 50); // Update every 50ms for smooth animation
       
       // Stop previous audio nodes
       if (audioNodes.length > 0) {
@@ -187,10 +268,11 @@ const HomePage = () => {
       
       try {
         // Play the current chord using our audio synthesis
-        const nodes = playChord(audioContext, chords[index], chordDuration, null, {
-          volume: 0.3,
-          waveType: 'sawtooth',
-          octave: 4
+        const nodes = playChord(workingAudioContext, chords[index], chordDuration, null, {
+          volume: 0.2,
+          waveType: 'sine',
+          octave: 4,
+          voicing: voicing
         });
         
         setAudioNodes(nodes);
@@ -200,7 +282,10 @@ const HomePage = () => {
       }
       
       index++;
-      intervalRef.current = setTimeout(playNext, chordDuration * 1000);
+      
+      // Schedule next chord with drift compensation for better synchronization
+      const nextDelay = Math.max(0, (chordDuration * 1000) - (timeDrift * 1000));
+      intervalRef.current = setTimeout(playNext, nextDelay);
     };
 
     playNext();
@@ -220,6 +305,8 @@ const HomePage = () => {
     
     setIsPlaying(false);
     setCurrentChordIndex(0);
+    setChordProgress(0);
+    setOverallProgress(0);
   };
 
   // Handle song detail navigation
@@ -248,6 +335,9 @@ const HomePage = () => {
             setSpeed={setSpeed}
             isPlaying={isPlaying}
             onPlayProgression={playProgression}
+            overallProgress={overallProgress}
+            voicing={voicing}
+            setVoicing={setVoicing}
           />
 
           {/* Chord Display with Nashville Numbers */}
@@ -256,6 +346,8 @@ const HomePage = () => {
               <ChordDisplay
                 chords={searchProgression}
                 currentIndex={currentChordIndex}
+                chordProgress={chordProgress}
+                overallProgress={overallProgress}
                 isPlaying={isPlaying}
                 onChordClick={(index) => {
                   setCurrentChordIndex(index);

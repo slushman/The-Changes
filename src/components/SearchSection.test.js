@@ -40,6 +40,16 @@ jest.mock('../utils/chordSearch.js', () => ({
   })
 }));
 
+// Mock the audio synthesis utilities
+jest.mock('../utils/audioSynthesis.js', () => ({
+  getAvailableVoicings: jest.fn(() => [
+    { name: 'root', description: 'Standard root position' },
+    { name: 'first-inversion', description: 'First inversion (3rd in bass)' },
+    { name: 'spread', description: 'Spread voicing across octaves' },
+    { name: 'drop2', description: 'Drop-2 voicing (2nd highest note dropped)' }
+  ])
+}));
+
 describe('SearchSection', () => {
   const defaultProps = {
     searchProgression: [],
@@ -48,7 +58,10 @@ describe('SearchSection', () => {
     speed: 120,
     setSpeed: jest.fn(),
     isPlaying: false,
-    onPlayProgression: jest.fn()
+    onPlayProgression: jest.fn(),
+    overallProgress: 0,
+    voicing: 'root',
+    setVoicing: jest.fn()
   };
 
   beforeEach(() => {
@@ -354,6 +367,223 @@ describe('SearchSection', () => {
     });
   });
 
+  describe('Chord Voicing Selector', () => {
+    test('renders voicing selector when voicings available', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      expect(screen.getByText('Voicing:')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Standard')).toBeInTheDocument(); // root -> Standard
+    });
+
+    test('shows all available voicing options', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      const voicingSelector = screen.getByDisplayValue('Standard');
+      const options = voicingSelector.querySelectorAll('option');
+      
+      expect(options.length).toBe(4); // Mock returns 4 voicings
+      expect(Array.from(options).some(opt => opt.textContent === 'Standard')).toBe(true);
+      expect(Array.from(options).some(opt => opt.textContent === 'First Inversion')).toBe(true);
+      expect(Array.from(options).some(opt => opt.textContent === 'Spread')).toBe(true);
+    });
+
+    test('calls setVoicing when selection changes', () => {
+      const setVoicing = jest.fn();
+      render(<SearchSection {...defaultProps} setVoicing={setVoicing} />);
+      
+      const voicingSelector = screen.getByDisplayValue('Standard');
+      fireEvent.change(voicingSelector, { target: { value: 'spread' } });
+      
+      expect(setVoicing).toHaveBeenCalledWith('spread');
+    });
+
+    test('reflects current voicing value', () => {
+      render(<SearchSection {...defaultProps} voicing="first-inversion" />);
+      
+      const voicingSelector = screen.getByDisplayValue('First Inversion');
+      expect(voicingSelector.value).toBe('first-inversion');
+    });
+
+    test('has proper title attribute for accessibility', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      const voicingSelector = screen.getByDisplayValue('Standard');
+      expect(voicingSelector).toHaveAttribute('title', 'Select chord voicing style');
+    });
+  });
+
+  describe('BPM Controls', () => {
+    test('renders quick BPM controls', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      expect(screen.getByText('120 BPM')).toBeInTheDocument();
+      expect(screen.getByTitle('Decrease tempo')).toBeInTheDocument();
+      expect(screen.getByTitle('Increase tempo')).toBeInTheDocument();
+    });
+
+    test('decreases speed when minus button clicked', () => {
+      const setSpeed = jest.fn();
+      render(<SearchSection {...defaultProps} setSpeed={setSpeed} speed={120} />);
+      
+      const decreaseButton = screen.getByTitle('Decrease tempo');
+      fireEvent.click(decreaseButton);
+      
+      expect(setSpeed).toHaveBeenCalledWith(110);
+    });
+
+    test('increases speed when plus button clicked', () => {
+      const setSpeed = jest.fn();
+      render(<SearchSection {...defaultProps} setSpeed={setSpeed} speed={120} />);
+      
+      const increaseButton = screen.getByTitle('Increase tempo');
+      fireEvent.click(increaseButton);
+      
+      expect(setSpeed).toHaveBeenCalledWith(130);
+    });
+
+    test('respects minimum speed limit', () => {
+      const setSpeed = jest.fn();
+      render(<SearchSection {...defaultProps} setSpeed={setSpeed} speed={40} />);
+      
+      const decreaseButton = screen.getByTitle('Decrease tempo');
+      fireEvent.click(decreaseButton);
+      
+      expect(setSpeed).toHaveBeenCalledWith(40); // Should not go below 40
+    });
+
+    test('respects maximum speed limit', () => {
+      const setSpeed = jest.fn();
+      render(<SearchSection {...defaultProps} setSpeed={setSpeed} speed={200} />);
+      
+      const increaseButton = screen.getByTitle('Increase tempo');
+      fireEvent.click(increaseButton);
+      
+      expect(setSpeed).toHaveBeenCalledWith(200); // Should not go above 200
+    });
+  });
+
+  describe('Visual Progress Feedback', () => {
+    test('shows mini progress bar when playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        overallProgress={0.3} 
+      />);
+      
+      const progressBar = document.querySelector('[style*="width: 30%"]');
+      expect(progressBar).toBeInTheDocument();
+    });
+
+    test('hides progress bar when not playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={false} 
+        overallProgress={0.3} 
+      />);
+      
+      const progressBar = document.querySelector('[style*="width: 30%"]');
+      expect(progressBar).not.toBeInTheDocument();
+    });
+
+    test('hides progress bar when progress is zero', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        overallProgress={0} 
+      />);
+      
+      const progressBar = document.querySelector('.h-1.bg-gray-200');
+      expect(progressBar).not.toBeInTheDocument();
+    });
+
+    test('updates progress bar width dynamically', () => {
+      const { rerender } = render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        overallProgress={0.25} 
+      />);
+      
+      let progressBar = document.querySelector('[style*="width: 25%"]');
+      expect(progressBar).toBeInTheDocument();
+      
+      rerender(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        overallProgress={0.75} 
+      />);
+      
+      progressBar = document.querySelector('[style*="width: 75%"]');
+      expect(progressBar).toBeInTheDocument();
+    });
+  });
+
+  describe('Play Button States', () => {
+    test('shows Play button when not playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={false} 
+        searchProgression={['C', 'Am']} 
+      />);
+      
+      expect(screen.getByText('Play')).toBeInTheDocument();
+    });
+
+    test('shows Stop button when playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        searchProgression={['C', 'Am']} 
+      />);
+      
+      expect(screen.getByText('Stop')).toBeInTheDocument();
+    });
+
+    test('applies correct styling when playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        searchProgression={['C', 'Am']} 
+      />);
+      
+      const playButton = screen.getByText('Stop').closest('button');
+      expect(playButton).toHaveClass('bg-red-100', 'text-red-700');
+    });
+
+    test('applies correct styling when not playing', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={false} 
+        searchProgression={['C', 'Am']} 
+      />);
+      
+      const playButton = screen.getByText('Play').closest('button');
+      expect(playButton).toHaveClass('bg-green-100', 'text-green-700');
+    });
+  });
+
+  describe('Integration with Audio-Visual Features', () => {
+    test('loads available voicings on mount', () => {
+      const { getAvailableVoicings } = require('../utils/audioSynthesis.js');
+      render(<SearchSection {...defaultProps} />);
+      
+      expect(getAvailableVoicings).toHaveBeenCalled();
+    });
+
+    test('maintains voicing state across re-renders', () => {
+      const { rerender } = render(<SearchSection {...defaultProps} voicing="spread" />);
+      
+      expect(screen.getByDisplayValue('Spread')).toBeInTheDocument();
+      
+      rerender(<SearchSection {...defaultProps} voicing="spread" isPlaying={true} />);
+      
+      expect(screen.getByDisplayValue('Spread')).toBeInTheDocument();
+    });
+
+    test('coordinates play button with progress indicator', () => {
+      render(<SearchSection {...defaultProps} 
+        isPlaying={true} 
+        overallProgress={0.5} 
+        searchProgression={['C', 'Am']} 
+      />);
+      
+      // Both stop button and progress bar should be visible
+      expect(screen.getByText('Stop')).toBeInTheDocument();
+      const progressBar = document.querySelector('[style*="width: 50%"]');
+      expect(progressBar).toBeInTheDocument();
+    });
+  });
+
   describe('Accessibility', () => {
     test('input has proper placeholder text', () => {
       render(<SearchSection {...defaultProps} />);
@@ -373,6 +603,21 @@ describe('SearchSection', () => {
       render(<SearchSection {...defaultProps} searchProgression={['C', 'Am']} />);
       
       expect(screen.getByText('Current Progression:')).toBeInTheDocument();
+    });
+
+    test('voicing selector has proper labeling', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      expect(screen.getByText('Voicing:')).toBeInTheDocument();
+      const voicingSelector = screen.getByDisplayValue('Standard');
+      expect(voicingSelector).toHaveAttribute('title');
+    });
+
+    test('BPM controls have descriptive titles', () => {
+      render(<SearchSection {...defaultProps} />);
+      
+      expect(screen.getByTitle('Decrease tempo')).toBeInTheDocument();
+      expect(screen.getByTitle('Increase tempo')).toBeInTheDocument();
     });
   });
 });
