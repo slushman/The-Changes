@@ -164,10 +164,6 @@ const FilterPanel = ({
   };
 
   const ArtistFilter = () => {
-    const artistOptions = databaseStats?.genres ? 
-      [...new Set(databaseStats.genres.map(genre => `${genre} artists`))] : 
-      [];
-    
     return (
       <div className="space-y-2">
         <input

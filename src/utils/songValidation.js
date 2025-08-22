@@ -31,7 +31,7 @@ const VALID_CHORD_PATTERNS = [
   /^[A-G][b#]?sus4$/,                // Csus4
   
   // Slash chords
-  /^[A-G][b#]?[^\/]*\/[A-G][b#]?$/   // C/E, Am/C, etc.
+  /^[A-G][b#]?[^/]*\/[A-G][b#]?$/   // C/E, Am/C, etc.
 ];
 
 const VALID_GENRES = [

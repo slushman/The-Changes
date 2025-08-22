@@ -95,14 +95,55 @@ export function parseChord(chordSymbol) {
 }
 
 /**
- * Get the frequencies for a chord
+ * Chord voicing types for different arrangements
+ */
+const CHORD_VOICINGS = {
+  'root': {
+    description: 'Standard root position',
+    octaveOffsets: [0, 0, 0, 0, 0] // All notes in same octave
+  },
+  'first-inversion': {
+    description: 'First inversion (3rd in bass)',
+    octaveOffsets: [1, 0, 0, 0, 0] // Root up an octave
+  },
+  'second-inversion': {
+    description: 'Second inversion (5th in bass)',
+    octaveOffsets: [1, 1, 0, 0, 0] // Root and 3rd up an octave
+  },
+  'spread': {
+    description: 'Spread voicing across octaves',
+    octaveOffsets: [0, 1, 0, 1, 0] // Alternate octaves
+  },
+  'close': {
+    description: 'Close voicing (tight spacing)',
+    octaveOffsets: [0, 0, 0, 0, 0], // Same octave
+    noteAdjustments: [0, 0, 0, 0, 0] // Could add fine-tuning
+  },
+  'open': {
+    description: 'Open voicing (wide spacing)',
+    octaveOffsets: [0, 1, 1, 2, 2] // Progressively higher octaves
+  },
+  'drop2': {
+    description: 'Drop-2 voicing (2nd highest note dropped)',
+    octaveOffsets: [0, -1, 0, 0, 0] // 2nd note down an octave
+  },
+  'quartal': {
+    description: 'Quartal harmony (4ths instead of 3rds)',
+    intervals: [0, 5, 10, 15, 20] // Stack of 4ths
+  }
+};
+
+/**
+ * Get the frequencies for a chord with specific voicing
  * @param {string} chordSymbol - Chord symbol like "Cm7"
  * @param {number} octave - Base octave (default 4)
+ * @param {string} voicing - Voicing type (default 'root')
  * @returns {Array<number>} - Array of frequencies in Hz
  */
-export function getChordFrequencies(chordSymbol, octave = 4) {
+export function getChordFrequencies(chordSymbol, octave = 4, voicing = 'root') {
   const { root, quality } = parseChord(chordSymbol);
   const intervals = CHORD_INTERVALS[quality] || CHORD_INTERVALS.major;
+  const voicingData = CHORD_VOICINGS[voicing] || CHORD_VOICINGS.root;
   
   const rootFreq = NOTE_FREQUENCIES[root];
   if (!rootFreq) {
@@ -110,13 +151,34 @@ export function getChordFrequencies(chordSymbol, octave = 4) {
     return [NOTE_FREQUENCIES.C];
   }
 
-  // Calculate octave multiplier
-  const octaveMultiplier = Math.pow(2, octave - 4);
+  // Use custom intervals for special voicings like quartal
+  const useIntervals = voicingData.intervals || intervals;
   
-  return intervals.map(interval => {
+  return useIntervals.map((interval, index) => {
+    // Calculate base frequency
     const semitoneMultiplier = Math.pow(2, interval / 12);
-    return rootFreq * octaveMultiplier * semitoneMultiplier;
+    let frequency = rootFreq * semitoneMultiplier;
+    
+    // Apply octave adjustments for voicing
+    const octaveOffset = voicingData.octaveOffsets?.[index] || 0;
+    const totalOctave = octave + octaveOffset;
+    const octaveMultiplier = Math.pow(2, totalOctave - 4);
+    
+    frequency *= octaveMultiplier;
+    
+    return frequency;
   });
+}
+
+/**
+ * Get available chord voicings
+ * @returns {Array<Object>} - Array of voicing objects with name and description
+ */
+export function getAvailableVoicings() {
+  return Object.entries(CHORD_VOICINGS).map(([name, data]) => ({
+    name,
+    description: data.description
+  }));
 }
 
 /**
@@ -191,12 +253,14 @@ export function applyEnvelope(gainNode, audioContext, startTime, duration,
 export function playChord(audioContext, chordSymbol, duration = 1.0, startTime = null, options = {}) {
   const {
     octave = 4,
-    waveType = 'sawtooth',
-    volume = 0.3,
+    waveType = 'sine',
+    volume = 0.2,
     attackTime = 0.1,
-    decayTime = 0.2,
-    sustainLevel = 0.6,
-    releaseTime = 0.5
+    decayTime = 0.3,
+    sustainLevel = 0.7,
+    releaseTime = 0.8,
+    voicing = 'root',
+    filterFrequency = 800
   } = options;
 
   if (!audioContext) {
@@ -205,7 +269,7 @@ export function playChord(audioContext, chordSymbol, duration = 1.0, startTime =
   }
 
   const actualStartTime = startTime !== null ? startTime : audioContext.currentTime;
-  const frequencies = getChordFrequencies(chordSymbol, octave);
+  const frequencies = getChordFrequencies(chordSymbol, octave, voicing);
   const nodes = [];
 
   // Create master gain for volume control
@@ -217,19 +281,26 @@ export function playChord(audioContext, chordSymbol, duration = 1.0, startTime =
     // Create oscillator
     const oscillator = createOscillator(audioContext, frequency, waveType);
     
+    // Create low-pass filter for warmth
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterFrequency, actualStartTime);
+    filter.Q.setValueAtTime(1, actualStartTime);
+    
     // Create envelope
     const envelope = createEnvelope(audioContext);
     applyEnvelope(envelope, audioContext, actualStartTime, duration, attackTime, decayTime, sustainLevel, releaseTime);
     
-    // Connect nodes
-    oscillator.connect(envelope);
+    // Connect nodes: oscillator → filter → envelope → master gain
+    oscillator.connect(filter);
+    filter.connect(envelope);
     envelope.connect(masterGain);
     
     // Schedule playback
     oscillator.start(actualStartTime);
     oscillator.stop(actualStartTime + duration);
     
-    nodes.push(oscillator, envelope);
+    nodes.push(oscillator, filter, envelope);
   });
 
   nodes.push(masterGain);

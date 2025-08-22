@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Music, Play, Pause, Settings, Lightbulb, X } from 'lucide-react';
 import { parseProgressionInput, getChordSuggestions } from '../utils/chordUtils.js';
 import { getProgressionSuggestions } from '../utils/chordSearch.js';
+import { getAvailableVoicings } from '../utils/audioSynthesis.js';
 
 const SearchSection = ({
   searchProgression,
@@ -16,6 +17,9 @@ const SearchSection = ({
   setSpeed,
   isPlaying,
   onPlayProgression,
+  overallProgress = 0,
+  voicing = 'root',
+  setVoicing = () => {},
   className = ""
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -25,16 +29,23 @@ const SearchSection = ({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [searchMode, setSearchMode] = useState('exact'); // 'exact', 'partial', 'transposed'
+  const [availableVoicings, setAvailableVoicings] = useState([]);
   
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // Update input value when searchProgression changes externally
+  // Load available voicings on component mount
   useEffect(() => {
-    if (Array.isArray(searchProgression)) {
+    setAvailableVoicings(getAvailableVoicings());
+  }, []);
+
+  // Only update input value when searchProgression changes from external sources (like clicking suggestions)
+  // We don't want to interfere with user typing
+  useEffect(() => {
+    if (Array.isArray(searchProgression) && inputValue === '') {
       setInputValue(searchProgression.join(' '));
     }
-  }, [searchProgression]);
+  }, [searchProgression, inputValue]);
 
   // Handle input changes and provide autocomplete
   const handleInputChange = (e) => {
@@ -44,6 +55,7 @@ const SearchSection = ({
 
     // Parse the input to get chord progression
     const chords = parseProgressionInput(value);
+    console.log('📝 Input changed:', value, '→ Parsed chords:', chords);
     setSearchProgression(chords);
 
     // Get chord suggestions for autocomplete
@@ -59,7 +71,6 @@ const SearchSection = ({
   // Update suggestions based on current input and cursor position
   const updateSuggestions = (value, position) => {
     const beforeCursor = value.substring(0, position);
-    const afterCursor = value.substring(position);
     
     // Find the current chord being typed
     const words = beforeCursor.split(/[\s,|-]+/);
@@ -193,18 +204,64 @@ const SearchSection = ({
                 <option value="transposed">Include Transpositions</option>
               </select>
             </div>
-            <div>
+            <div className="flex flex-col space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                Playback Speed: {speed} BPM
+                Playback Speed: <span className="font-mono text-blue-600">{speed} BPM</span>
               </label>
-              <input
-                type="range"
-                min="60"
-                max="180"
-                value={speed}
-                onChange={(e) => setSpeed(parseInt(e.target.value))}
-                className="ml-2 w-24"
-              />
+              
+              {/* Enhanced BPM Slider */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="range"
+                  min="40"
+                  max="200"
+                  step="5"
+                  value={speed}
+                  onChange={(e) => setSpeed(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((speed - 40) / 160) * 100}%, #e5e7eb ${((speed - 40) / 160) * 100}%, #e5e7eb 100%)`
+                  }}
+                />
+                
+                {/* Numeric Input */}
+                <input
+                  type="number"
+                  min="40"
+                  max="200"
+                  value={speed}
+                  onChange={(e) => setSpeed(Math.max(40, Math.min(200, parseInt(e.target.value) || 40)))}
+                  className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              {/* BPM Preset Buttons */}
+              <div className="flex items-center space-x-1 text-xs">
+                <span className="text-gray-500 mr-2">Presets:</span>
+                {[60, 80, 100, 120, 140, 160].map((bpm) => (
+                  <button
+                    key={bpm}
+                    onClick={() => setSpeed(bpm)}
+                    className={`px-2 py-1 rounded transition-colors ${
+                      speed === bpm
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {bpm}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Tempo Description */}
+              <div className="text-xs text-gray-500">
+                {speed < 60 && '🐌 Very Slow'}
+                {speed >= 60 && speed < 80 && '🚶 Slow'}
+                {speed >= 80 && speed < 100 && '🚶‍♂️ Moderate'}
+                {speed >= 100 && speed < 140 && '🏃 Medium'}
+                {speed >= 140 && speed < 180 && '🏃‍♂️ Fast'}
+                {speed >= 180 && '⚡ Very Fast'}
+              </div>
             </div>
           </div>
         </div>
@@ -318,19 +375,79 @@ const SearchSection = ({
                 ))}
               </div>
             </div>
-            <button
-              onClick={() => onPlayProgression(searchProgression)}
-              className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
-                isPlaying 
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-              }`}
-            >
-              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-              <span className="text-sm font-medium">
-                {isPlaying ? 'Stop' : 'Play'}
-              </span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <div className="flex flex-col space-y-1">
+                <button
+                  onClick={() => {
+                    console.log('🔽 Play button clicked! searchProgression:', searchProgression);
+                    onPlayProgression(searchProgression);
+                  }}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                    isPlaying 
+                      ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                >
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                  <span className="text-sm font-medium">
+                    {isPlaying ? 'Stop' : 'Play'}
+                  </span>
+                </button>
+                
+                {/* Mini progress indicator under play button */}
+                {isPlaying && overallProgress > 0 && (
+                  <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all duration-100 ease-linear"
+                      style={{ width: `${overallProgress * 100}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Quick BPM Control */}
+              <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg border">
+                <Music size={14} className="text-gray-500" />
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setSpeed(Math.max(40, speed - 10))}
+                    className="w-6 h-6 flex items-center justify-center text-xs bg-white border rounded hover:bg-gray-50 transition-colors"
+                    title="Decrease tempo"
+                  >
+                    −
+                  </button>
+                  <span className="text-xs font-mono min-w-[3rem] text-center">
+                    {speed} BPM
+                  </span>
+                  <button
+                    onClick={() => setSpeed(Math.min(200, speed + 10))}
+                    className="w-6 h-6 flex items-center justify-center text-xs bg-white border rounded hover:bg-gray-50 transition-colors"
+                    title="Increase tempo"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Chord Voicing Selector */}
+              {availableVoicings.length > 0 && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg border">
+                  <span className="text-xs text-gray-600">Voicing:</span>
+                  <select
+                    value={voicing}
+                    onChange={(e) => setVoicing(e.target.value)}
+                    className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Select chord voicing style"
+                  >
+                    {availableVoicings.map(({ name, description }) => (
+                      <option key={name} value={name} title={description}>
+                        {name === 'root' ? 'Standard' : name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

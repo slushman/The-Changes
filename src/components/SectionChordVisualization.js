@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { Music, Play, Pause, Volume2, RotateCcw, Info, Zap } from 'lucide-react';
-import { progressionToNashville, chordToNashville } from '../utils/nashvilleNumbers';
+import { Play, Pause, RotateCcw, Info, Zap } from 'lucide-react';
+import { progressionToNashville } from '../utils/nashvilleNumbers';
 
 const SectionChordVisualization = ({
   sectionName,

@@ -30,7 +30,7 @@ const SUBSTITUTION_RULES = {
 
   // Tritone substitutions (jazz)
   'V7': ['bII7'], // Tritone sub
-  '57': ['b27'], // Tritone sub
+  '5tritone': ['b27'], // Tritone sub (using different key to avoid duplicate)
 
   // Modal substitutions
   'bVII': ['4', '1'], // bVII (modal) can go to IV, I
@@ -105,7 +105,7 @@ const PROGRESSION_VARIATIONS = {
  * @returns {Array} Array of substitution suggestions
  */
 export const getChordSubstitutions = (chord, key, context = {}) => {
-  const { previousChord, nextChord, position } = context;
+  const { nextChord } = context;
   
   // Convert chord to Nashville number for analysis
   const nashvilleNumber = chordToNashville(chord, key);
@@ -339,8 +339,6 @@ const applySubstitutions = (nashvilleProgression) => {
  * Add modal interchange chords
  */
 const addModalInterchange = (nashvilleProgression) => {
-  const modalChords = ['bVII', 'bIII', 'bVI', '4m'];
-  
   return nashvilleProgression.map((chord, index) => {
     // Occasionally substitute with modal chords
     if (chord === '4' && Math.random() > 0.5) {
