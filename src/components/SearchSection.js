@@ -85,7 +85,7 @@ const SearchSection = ({
     }
 
     // Get progression suggestions based on current chords
-    const currentChords = parseProgressionInput(beforeCursor.replace(currentChord, '').trim());
+    const currentChords = parseProgressionInput(beforeCursor.replace(currentChord, '').trim()) || [];
     if (currentChords.length > 0) {
       const progSuggestions = getProgressionSuggestions(currentChords, 5);
       setProgressionSuggestions(progSuggestions);

@@ -167,7 +167,14 @@ export const normalizeNote = (note) => {
 export const normalizeChordQuality = (quality) => {
   if (!quality) return 'maj';
   
-  const normalized = quality.toLowerCase().trim();
+  const trimmed = quality.trim();
+  // Try exact match first (preserves case)
+  if (CHORD_QUALITIES[trimmed]) {
+    return CHORD_QUALITIES[trimmed];
+  }
+  
+  // Then try lowercase
+  const normalized = trimmed.toLowerCase();
   return CHORD_QUALITIES[normalized] || quality;
 };
 
@@ -378,7 +385,7 @@ const calculateKeyFit = (chords, keyNote, mode) => {
     }
   });
 
-  return totalWeight > 0 ? score / totalWeight : 0;
+  return totalWeight > 0 ? Math.min(1, score / totalWeight) : 0;
 };
 
 /**
@@ -424,10 +431,10 @@ export const getChordSuggestions = (partialChord, maxSuggestions = 10) => {
       .map(note => note.charAt(0).toUpperCase() + note.slice(1));
 
     possibleRoots.forEach(root => {
-      // Check if the partial matches this root or root + accidental
-      const rootMatches = root.toLowerCase().startsWith(partial.toLowerCase()) || 
-                         (root + '#').toLowerCase().startsWith(partial.toLowerCase()) ||
-                         (root + 'b').toLowerCase().startsWith(partial.toLowerCase());
+      // Check if the partial starts with this root or root + accidental
+      const rootMatches = partial.toLowerCase().startsWith(root.toLowerCase()) || 
+                         partial.toLowerCase().startsWith((root + '#').toLowerCase()) ||
+                         partial.toLowerCase().startsWith((root + 'b').toLowerCase());
       
       if (rootMatches || partial.length === 1) {
         // Add common chord types
@@ -445,7 +452,7 @@ export const getChordSuggestions = (partialChord, maxSuggestions = 10) => {
     ['#', 'b'].forEach(accidental => {
       possibleRoots.forEach(root => {
         const accidentalRoot = root + accidental;
-        if (accidentalRoot.toLowerCase().startsWith(partial.toLowerCase())) {
+        if (partial.toLowerCase().startsWith(accidentalRoot.toLowerCase())) {
           const commonQualities = ['', 'm', '7', 'maj7', 'm7', 'sus4', 'sus2', 'dim', 'aug'];
           commonQualities.forEach(quality => {
             const chord = accidentalRoot + quality;

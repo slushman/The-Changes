@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Play, Pause, Volume2 } from 'lucide-react';
+import { Play, Volume2 } from 'lucide-react';
 
 const ProgressionVisualizer = ({
   progression = [],

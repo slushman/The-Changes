@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Settings, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react';
+import { Settings, Maximize2, Minimize2 } from 'lucide-react';
 import ProgressionVisualizer from './ProgressionVisualizer';
 import ChordVisualization from './ChordVisualization';
 
