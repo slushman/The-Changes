@@ -181,8 +181,8 @@ jobs:
           if (audit.vulnerabilities) {
             Object.keys(audit.vulnerabilities).forEach(pkg => {
               const vuln = audit.vulnerabilities[pkg];
-              // Check if this affects any runtime dependencies
-              if (runtimeDeps.some(dep => pkg.includes(dep)) && vuln.severity !== 'info') {
+              // Check if this affects any runtime dependencies (exact match)
+              if (runtimeDeps.includes(pkg) && vuln.severity !== 'info') {
                 console.log('❌ Runtime vulnerability found in:', pkg);
                 hasRuntimeVulns = true;
               }
