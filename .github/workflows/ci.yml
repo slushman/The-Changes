@@ -80,7 +80,7 @@ jobs:
         find build/static/css -name "*.css" -exec du -sh {} \;
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-files
         path: build/
@@ -104,7 +104,7 @@ jobs:
       run: npm ci
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-files
         path: build/
@@ -137,7 +137,7 @@ jobs:
       run: npm ci
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-files
         path: build/
@@ -248,7 +248,7 @@ jobs:
         npm test src/performance/performance.test.js -- --watchAll=false 2>&1 | grep -E "(search|synthesis|validation).*ms" >> performance-report.md
 
     - name: Upload performance report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-report
         path: performance-report.md
@@ -264,7 +264,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-files
         path: build/
