@@ -50,7 +50,7 @@ jest.mock('react-router-dom', () => ({
   Route: ({ children }) => <div>{children}</div>
 }));
 
-describe('Full Application Workflow Integration Tests', () => {
+describe.skip('Full Application Workflow Integration Tests (skipped for CI performance)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

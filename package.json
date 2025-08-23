@@ -17,6 +17,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:fast": "react-scripts test --watchAll=false --testTimeout=10000",
+    "test:ci": "npm run test:fast",
     "eject": "react-scripts eject",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
@@ -27,6 +29,14 @@
     "validate:database": "node -e \"import('./src/data/songDatabase.js').then(db => { const validation = require('./src/utils/songValidation').validateDatabase(db.songDatabase); console.log('Database validation:', validation.isValid ? 'PASSED' : 'FAILED'); if (!validation.isValid) { console.error(validation.errors); process.exit(1); } })\"",
     "audit:prod": "npm audit --only=prod --audit-level=moderate",
     "audit:dev": "npm audit --only=dev --audit-level=high"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx}",
+      "!src/**/*.test.{js,jsx}",
+      "!src/index.js",
+      "!src/reportWebVitals.js"
+    ]
   },
   "eslintConfig": {
     "extends": [
