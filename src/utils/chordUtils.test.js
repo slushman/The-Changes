@@ -34,7 +34,7 @@ describe('parseChord', () => {
     expect(result).toEqual({
       original: 'Am',
       root: 'A',
-      quality: 'min',
+      quality: 'm',
       bass: null,
       isSlashChord: false
     });
@@ -67,7 +67,7 @@ describe('parseChord', () => {
     expect(result).toEqual({
       original: 'Am7/G',
       root: 'A',
-      quality: 'min7',
+      quality: 'm7',
       bass: 'G',
       isSlashChord: true
     });
@@ -76,18 +76,18 @@ describe('parseChord', () => {
   test('parses chords with sharps and flats', () => {
     expect(parseChord('F#')).toMatchObject({ root: 'F#', quality: 'maj' });
     expect(parseChord('Bb')).toMatchObject({ root: 'A#', quality: 'maj' }); // Normalized to sharp
-    expect(parseChord('C#m')).toMatchObject({ root: 'C#', quality: 'min' });
+    expect(parseChord('C#m')).toMatchObject({ root: 'C#', quality: 'm' });
   });
 
   test('handles case insensitive input', () => {
     expect(parseChord('c')).toMatchObject({ root: 'C', quality: 'maj' });
-    expect(parseChord('am')).toMatchObject({ root: 'A', quality: 'min' });
+    expect(parseChord('am')).toMatchObject({ root: 'A', quality: 'm' });
     expect(parseChord('FMAJ7')).toMatchObject({ root: 'F', quality: 'maj7' });
   });
 
   test('handles various chord quality notations', () => {
     expect(parseChord('CM7')).toMatchObject({ quality: 'maj7' });
-    expect(parseChord('C-')).toMatchObject({ quality: 'min' });
+    expect(parseChord('C-')).toMatchObject({ quality: 'm' });
     expect(parseChord('C°')).toMatchObject({ quality: 'dim' });
     expect(parseChord('C+')).toMatchObject({ quality: 'aug' });
   });
@@ -102,7 +102,7 @@ describe('parseChord', () => {
 
   test('handles whitespace', () => {
     expect(parseChord(' C ')).toMatchObject({ root: 'C', quality: 'maj' });
-    expect(parseChord('  Am7  ')).toMatchObject({ root: 'A', quality: 'min7' });
+    expect(parseChord('  Am7  ')).toMatchObject({ root: 'A', quality: 'm7' });
   });
 });
 
