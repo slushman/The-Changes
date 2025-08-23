@@ -3,7 +3,7 @@
  * Supports CSV, JSON, and structured data formats
  */
 
-import { validateSong, validateDatabase } from './songValidation.js';
+import { validateSong } from './songValidation.js';
 
 /**
  * Import songs from JSON format

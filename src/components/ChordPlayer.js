@@ -8,8 +8,7 @@ import { Play, Pause, Square, SkipBack, SkipForward, Volume2, VolumeX } from 'lu
 import { 
   createAudioContext, 
   playProgression, 
-  stopAudioNodes,
-  getChordFrequencies 
+  stopAudioNodes
 } from '../utils/audioSynthesis';
 
 const ChordPlayer = ({ 

@@ -6,13 +6,11 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HomePage from '../components/HomePage';
-import SearchSection from '../components/SearchSection';
-import SearchResults from '../components/SearchResults';
 import SongDetailPage from '../components/SongDetailPage';
 import ProgressionExplorer from '../components/ProgressionExplorer';
 import { songDatabase } from '../data/songDatabase';
-import { searchChords, searchBySections } from '../utils/chordSearch';
-import { createAudioContext, playChord, playProgression } from '../utils/audioSynthesis';
+import { searchChords } from '../utils/chordSearch';
+import { playProgression } from '../utils/audioSynthesis';
 
 // Mock Web Audio API
 const mockAudioContext = {
