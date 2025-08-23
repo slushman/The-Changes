@@ -24,7 +24,9 @@
     "test:integration": "npm test src/integration/ -- --watchAll=false",
     "test:performance": "npm test src/performance/ -- --watchAll=false",
     "test:a11y": "echo 'Accessibility tests would run here'",
-    "validate:database": "node -e \"import('./src/data/songDatabase.js').then(db => { const validation = require('./src/utils/songValidation').validateDatabase(db.songDatabase); console.log('Database validation:', validation.isValid ? 'PASSED' : 'FAILED'); if (!validation.isValid) { console.error(validation.errors); process.exit(1); } })\""
+    "validate:database": "node -e \"import('./src/data/songDatabase.js').then(db => { const validation = require('./src/utils/songValidation').validateDatabase(db.songDatabase); console.log('Database validation:', validation.isValid ? 'PASSED' : 'FAILED'); if (!validation.isValid) { console.error(validation.errors); process.exit(1); } })\"",
+    "audit:prod": "npm audit --only=prod --audit-level=moderate",
+    "audit:dev": "npm audit --only=dev --audit-level=high"
   },
   "eslintConfig": {
     "extends": [
