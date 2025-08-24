@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, X, Filter } from 'lucide-react';
 import { getDatabaseStats } from '../data/songDatabase.js';
+import MultiSelectDropdown from './MultiSelectDropdown.js';
 import { 
   VALID_GENRES, 
   VALID_DECADES, 
@@ -48,6 +49,28 @@ const FilterPanel = ({
     onFiltersChange(newFilters);
   };
 
+  // Handle multi-select dropdown changes
+  const handleMultiSelectChange = (filterType, selectedValues) => {
+    const newFilters = { ...filters, [filterType]: selectedValues };
+    onFiltersChange(newFilters);
+  };
+
+  // Get count for dropdown options
+  const getOptionCount = (filterType, option) => {
+    if (!databaseStats) return 0;
+    
+    switch (filterType) {
+      case 'genres':
+        return databaseStats.genreCounts?.[option] || 0;
+      case 'decades':
+        return databaseStats.decadeCounts?.[option] || 0;
+      case 'sections':
+        return databaseStats.sectionCounts?.[option] || 0;
+      default:
+        return 0;
+    }
+  };
+
   // Clear all filters
   const clearAllFilters = () => {
     onFiltersChange({
@@ -84,34 +107,6 @@ const FilterPanel = ({
     </div>
   );
 
-  const MultiSelectFilter = ({ filterType, options, label, showCounts = false }) => (
-    <div className="space-y-2">
-      {options.map(option => {
-        const isSelected = filters[filterType]?.includes(option);
-        const count = showCounts && databaseStats ? 
-          (filterType === 'genres' ? 
-            databaseStats.genres.filter(g => g === option).length : 
-            databaseStats.decades.filter(d => d === option).length) : 0;
-        
-        return (
-          <label key={option} className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => handleFilterChange(filterType, option)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className={`text-sm ${isSelected ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>
-              {option}
-              {showCounts && count > 0 && (
-                <span className="text-gray-400 ml-1">({count})</span>
-              )}
-            </span>
-          </label>
-        );
-      })}
-    </div>
-  );
 
   const SingleSelectFilter = ({ filterType, options, label, placeholder = "Any" }) => (
     <select
@@ -260,65 +255,76 @@ const FilterPanel = ({
     <div className={`bg-white border border-gray-200 rounded-lg ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Filter size={18} className="text-gray-500" />
-            <h3 className="font-medium text-gray-900">Advanced Filters</h3>
-            {hasActiveFilters() && (
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-                {getActiveFilterCount()} active
-              </span>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {hasActiveFilters() && (
-              <button
-                onClick={clearAllFilters}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Clear all
-              </button>
-            )}
-            {collapsible && (
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <ChevronUp size={18} />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center space-x-2 mb-2">
+          <Filter size={18} className="text-gray-500" />
+          <h3 className="font-medium text-gray-900">Advanced Filters</h3>
+          {collapsible && (
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="text-gray-400 hover:text-gray-600 ml-auto"
+            >
+              <ChevronUp size={18} />
+            </button>
+          )}
         </div>
+        {(hasActiveFilters() || collapsible) && (
+          <div className="flex items-center justify-between">
+            <div>
+              {hasActiveFilters() && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                  {getActiveFilterCount()} active
+                </span>
+              )}
+            </div>
+            <div>
+              {hasActiveFilters() && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filter Content */}
       <div className="p-4 space-y-6">
         {/* Genre Filter */}
         <FilterSection title="Genre">
-          <MultiSelectFilter
-            filterType="genres"
+          <MultiSelectDropdown
             options={VALID_GENRES}
-            label="Genres"
+            selectedValues={filters.genres || []}
+            onChange={(selectedValues) => handleMultiSelectChange('genres', selectedValues)}
+            placeholder="Select genres..."
             showCounts={true}
+            getCounts={(option) => getOptionCount('genres', option)}
           />
         </FilterSection>
 
         {/* Decade Filter */}
         <FilterSection title="Decade/Era">
-          <MultiSelectFilter
-            filterType="decades"
+          <MultiSelectDropdown
             options={VALID_DECADES}
-            label="Decades"
+            selectedValues={filters.decades || []}
+            onChange={(selectedValues) => handleMultiSelectChange('decades', selectedValues)}
+            placeholder="Select decades..."
             showCounts={true}
+            getCounts={(option) => getOptionCount('decades', option)}
           />
         </FilterSection>
 
         {/* Song Section Filter */}
         <FilterSection title="Song Section">
-          <MultiSelectFilter
-            filterType="sections"
+          <MultiSelectDropdown
             options={VALID_SECTION_NAMES}
-            label="Sections"
+            selectedValues={filters.sections || []}
+            onChange={(selectedValues) => handleMultiSelectChange('sections', selectedValues)}
+            placeholder="Select sections..."
+            showCounts={true}
+            getCounts={(option) => getOptionCount('sections', option)}
           />
         </FilterSection>
 

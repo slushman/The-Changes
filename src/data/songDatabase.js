@@ -2040,11 +2040,34 @@ export const songDatabase = [
 
 // Utility functions for working with the song database
 export const getDatabaseStats = () => {
+  // Get genre counts
+  const genreCounts = {};
+  songDatabase.forEach(song => {
+    genreCounts[song.genre] = (genreCounts[song.genre] || 0) + 1;
+  });
+
+  // Get decade counts
+  const decadeCounts = {};
+  songDatabase.forEach(song => {
+    decadeCounts[song.decade] = (decadeCounts[song.decade] || 0) + 1;
+  });
+
+  // Get section counts
+  const sectionCounts = {};
+  songDatabase.forEach(song => {
+    Object.keys(song.sections).forEach(section => {
+      sectionCounts[section] = (sectionCounts[section] || 0) + 1;
+    });
+  });
+
   return {
     totalSongs: songDatabase.length,
     genres: [...new Set(songDatabase.map(song => song.genre))],
     decades: [...new Set(songDatabase.map(song => song.decade))],
-    totalSections: songDatabase.reduce((acc, song) => acc + Object.keys(song.sections).length, 0)
+    totalSections: songDatabase.reduce((acc, song) => acc + Object.keys(song.sections).length, 0),
+    genreCounts,
+    decadeCounts,
+    sectionCounts
   };
 };
 
