@@ -5,11 +5,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Music } from 'lucide-react';
+import { Music, Plus } from 'lucide-react';
 import SearchSection from './SearchSection';
 import SearchResults from './SearchResults';
 import FilterPanel from './FilterPanel';
 import ChordDisplay from './ChordDisplay';
+import AddSongModal from './AddSongModal';
 import { searchByProgression as searchChordProgression } from '../utils/chordSearch';
 import { createAudioContext, playChord, stopAudioNodes } from '../utils/audioSynthesis';
 import { progressionToNashville } from '../utils/nashvilleNumbers';
@@ -37,6 +38,7 @@ const HomePage = () => {
     progressionLength: null,
     artists: []
   });
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -314,14 +316,33 @@ const HomePage = () => {
     navigate(`/song/${songId}`);
   };
 
+  // Handle new song added
+  const handleSongAdded = (newSong) => {
+    console.log('New song added:', newSong);
+    // Optionally refresh search results or update local state
+    // In a real app, you might want to update the database reference
+    // or trigger a refresh of search results
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
-          <Music className="text-blue-600" />
-          Chord Progression Explorer
-        </h1>
-        <p className="text-gray-600">Discover harmonic connections between your favorite songs</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+              <Music className="text-blue-600" />
+              Chord Progression Explorer
+            </h1>
+            <p className="text-gray-600">Discover harmonic connections between your favorite songs</p>
+          </div>
+          <button
+            onClick={() => setShowAddSongModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Plus className="w-5 h-5" />
+            Add Song
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -402,6 +423,13 @@ const HomePage = () => {
           />
         </div>
       </div>
+
+      {/* Add Song Modal */}
+      <AddSongModal
+        isOpen={showAddSongModal}
+        onClose={() => setShowAddSongModal(false)}
+        onSongAdded={handleSongAdded}
+      />
     </div>
   );
 };
